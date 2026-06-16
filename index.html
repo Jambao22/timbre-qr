@@ -1,39 +1,225 @@
+
 <!DOCTYPE html>
-<html>
+
+<html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Timbre QR</title>
+
 <style>
+
 body{
-    font-family: Arial;
+    background:#0f172a;
+    color:white;
+    font-family:Arial,sans-serif;
     text-align:center;
-    margin-top:100px;
-}
-button{
-    font-size:30px;
     padding:20px;
 }
+
+.contenedor{
+    max-width:500px;
+    margin:auto;
+    background:#1e293b;
+    padding:25px;
+    border-radius:15px;
+}
+
+input,select{
+    width:100%;
+    padding:12px;
+    margin:10px 0;
+    border:none;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    padding:18px;
+    font-size:24px;
+    border:none;
+    border-radius:10px;
+    background:#22c55e;
+    color:white;
+    cursor:pointer;
+}
+
+button:disabled{
+    background:#64748b;
+}
+
+#estado{
+    margin-top:20px;
+    font-size:18px;
+}
+
 </style>
+
 </head>
+
 <body>
+
+<div class="contenedor">
 
 <h1>🏠 Timbre de Casa</h1>
 
-<button onclick="tocarTimbre()">
+<p>Complete los datos antes de tocar el timbre</p>
+
+<input
+type="text"
+id="nombre"
+placeholder="Ingrese su nombre">
+
+<select id="motivo">
+<option>👥 Visita</option>
+<option>📦 Entrega</option>
+<option>🛠 Técnico</option>
+<option>🚨 Emergencia</option>
+</select>
+
+<button id="btnTimbre">
 🔔 TOCAR TIMBRE
 </button>
 
-<script>
+<div id="estado"></div>
 
-function tocarTimbre(){
+</div>
+
+<script>
 
 const token = "8819671085:AAEx3Po7WWh85muYbMsBYjWU6ei4Q1K-8kU";
 const chatid = "-5571681814";
 
+const btn = document.getElementById("btnTimbre");
+const estado = document.getElementById("estado");
+
+verificarBloqueo();
+
+btn.addEventListener("click", tocarTimbre);
+
+function tocarTimbre(){
+
+const nombre =
+document.getElementById("nombre").value.trim() || "Anónimo";
+
+const motivo =
+document.getElementById("motivo").value;
+
+const ahora = new Date();
+
+const fecha =
+ahora.toLocaleDateString("es-AR");
+
+const hora =
+ahora.toLocaleTimeString("es-AR");
+
+const mensaje = encodeURIComponent(
+"🏠 TIMBRE QR\n\n" +
+"👤 Nombre: " + nombre + "\n" +
+"📌 Motivo: " + motivo + "\n" +
+"📅 Fecha: " + fecha + "\n" +
+"🕒 Hora: " + hora
+);
+
 fetch(
-`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=🔔 Alguien está en la puerta`
+`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=${mensaje}`
 )
-.then(() => alert("Timbre enviado"));
+.then(response => response.json())
+.then(data => {
+
+if(data.ok){
+
+estado.innerHTML =
+"✅ Notificación enviada correctamente";
+
+localStorage.setItem(
+"ultimoTimbre",
+Date.now()
+);
+
+iniciarCuentaRegresiva();
+
+}else{
+
+estado.innerHTML =
+"❌ Error enviando el mensaje";
+
+}
+
+})
+.catch(() => {
+
+estado.innerHTML =
+"❌ Error de conexión";
+
+});
+
+}
+
+function verificarBloqueo(){
+
+const ultimo =
+localStorage.getItem("ultimoTimbre");
+
+if(!ultimo) return;
+
+const diferencia =
+Date.now() - parseInt(ultimo);
+
+if(diferencia < 600000){
+
+iniciarCuentaRegresiva();
+
+}
+
+}
+
+function iniciarCuentaRegresiva(){
+
+btn.disabled = true;
+
+const intervalo = setInterval(() => {
+
+const ultimo =
+localStorage.getItem("ultimoTimbre");
+
+const diferencia =
+Date.now() - parseInt(ultimo);
+
+const restante =
+600000 - diferencia;
+
+if(restante <= 0){
+
+clearInterval(intervalo);
+
+btn.disabled = false;
+
+estado.innerHTML =
+"✅ Puede volver a tocar el timbre";
+
+localStorage.removeItem("ultimoTimbre");
+
+return;
+
+}
+
+const minutos =
+Math.floor(restante/60000);
+
+const segundos =
+Math.floor((restante%60000)/1000);
+
+estado.innerHTML =
+"⏳ Espere " +
+minutos +
+"m " +
+segundos +
+"s para volver a tocar";
+
+},1000);
 
 }
 
