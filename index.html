@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Timbre QR</title>
+<style>
+body{
+    font-family: Arial;
+    text-align:center;
+    margin-top:100px;
+}
+button{
+    font-size:30px;
+    padding:20px;
+}
+</style>
+</head>
+<body>
+
+<h1>🏠 Timbre de Casa</h1>
+
+<button onclick="tocarTimbre()">
+🔔 TOCAR TIMBRE
+</button>
+
+<script>
+
+function tocarTimbre(){
+
+const token = "TU_TOKEN";
+const chatid = "TU_ID_GRUPO";
+
+fetch(
+`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=🔔 Alguien está en la puerta`
+)
+.then(() => alert("Timbre enviado"));
+
+}
+
+</script>
+
+</body>
+</html>
