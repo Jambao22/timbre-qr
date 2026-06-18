@@ -1,11 +1,9 @@
-
 <!DOCTYPE html>
 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Timbre QR</title>
 
 <style>
@@ -19,14 +17,14 @@ body{
 }
 
 .contenedor{
-    max-width:500px;
+    max-width:550px;
     margin:auto;
     background:#1e293b;
     padding:25px;
     border-radius:15px;
 }
 
-input,select{
+input,select,textarea{
     width:100%;
     padding:12px;
     margin:10px 0;
@@ -38,12 +36,13 @@ input,select{
 button{
     width:100%;
     padding:18px;
-    font-size:24px;
+    font-size:20px;
     border:none;
     border-radius:10px;
     background:#22c55e;
     color:white;
     cursor:pointer;
+    margin-top:10px;
 }
 
 button:disabled{
@@ -53,6 +52,10 @@ button:disabled{
 #estado{
     margin-top:20px;
     font-size:18px;
+}
+
+hr{
+    margin:25px 0;
 }
 
 </style>
@@ -65,7 +68,7 @@ button:disabled{
 
 <h1>🏠 Timbre de Casa</h1>
 
-<p>Complete los datos antes de tocar el timbre</p>
+<p>Complete los datos antes de continuar</p>
 
 <input
 type="text"
@@ -73,6 +76,7 @@ id="nombre"
 placeholder="Ingrese su nombre">
 
 <select id="motivo">
+<option value="">Seleccione un motivo</option>
 <option>👥 Visita</option>
 <option>📦 Entrega</option>
 <option>🛠 Técnico</option>
@@ -85,36 +89,103 @@ placeholder="Ingrese su nombre">
 
 <div id="estado"></div>
 
+<hr>
+
+<h2>📝 Dejar Mensaje</h2>
+
+<textarea
+id="mensajeVisitante"
+rows="5"
+placeholder="Escriba su mensaje..."></textarea>
+
+<button id="btnMensaje">
+📨 ENVIAR MENSAJE
+</button>
+
+<div id="estadoMensaje"></div>
+
 </div>
+
 <audio id="sonidoTimbre">
-    <source src="timbre.mp3" type="audio/mpeg">
+<source src="timbre.mp3" type="audio/mpeg">
 </audio>
 
 <audio id="sonidoEnviado">
-    <source src="eviado.mp3" type="audio/mpeg">
+<source src="enviado.mp3" type="audio/mpeg">
 </audio>
+
 <script>
 
 const token = "8819671085:AAEx3Po7WWh85muYbMsBYjWU6ei4Q1K-8kU";
 const chatid = "-5571681814";
 
+const TIEMPO_ESPERA = 300000;
+
 const btn = document.getElementById("btnTimbre");
 const estado = document.getElementById("estado");
+
+const btnMensaje = document.getElementById("btnMensaje");
+const estadoMensaje = document.getElementById("estadoMensaje");
 
 verificarBloqueo();
 
 btn.addEventListener("click", tocarTimbre);
+btnMensaje.addEventListener("click", enviarMensaje);
+
+function obtenerDispositivo(){
+
+const ua = navigator.userAgent;
+
+if(/android/i.test(ua)) return "Android";
+if(/iPhone|iPad|iPod/i.test(ua)) return "iPhone/iPad";
+if(/Windows/i.test(ua)) return "Windows";
+if(/Mac/i.test(ua)) return "Mac";
+
+return "Desconocido";
+
+}
+
+function validarCampos(){
+
+const nombre =
+document.getElementById("nombre").value.trim();
+
+const motivo =
+document.getElementById("motivo").value;
+
+if(nombre === ""){
+
+alert("Debe ingresar su nombre");
+return false;
+
+}
+
+if(motivo === ""){
+
+alert("Debe seleccionar un motivo");
+return false;
+
+}
+
+return true;
+
+}
 
 function tocarTimbre(){
 
+if(!validarCampos()) return;
+
+document.getElementById("sonidoTimbre").play();
+
+obtenerUbicacion(function(ubicacion){
+
 const nombre =
-document.getElementById("nombre").value.trim() || "Anónimo";
+document.getElementById("nombre").value.trim();
 
 const motivo =
 document.getElementById("motivo").value;
 
 const ahora = new Date();
-    
 
 const fecha =
 ahora.toLocaleDateString("es-AR");
@@ -122,14 +193,81 @@ ahora.toLocaleDateString("es-AR");
 const hora =
 ahora.toLocaleTimeString("es-AR");
 
+const dispositivo =
+obtenerDispositivo();
+
 const mensaje = encodeURIComponent(
+
 "🏠 TIMBRE QR\n\n" +
+
 "👤 Nombre: " + nombre + "\n" +
+
 "📌 Motivo: " + motivo + "\n" +
+
+"📱 Dispositivo: " + dispositivo + "\n" +
+
 "📅 Fecha: " + fecha + "\n" +
-"🕒 Hora: " + hora
+
+"🕒 Hora: " + hora + "\n\n" +
+
+ubicacion
+
 );
-document.getElementById("sonidoTimbre").play();
+
+enviarTelegram(
+mensaje,
+true
+);
+
+});
+
+}
+
+function enviarMensaje(){
+
+if(!validarCampos()) return;
+
+const texto =
+document.getElementById("mensajeVisitante").value.trim();
+
+if(texto === ""){
+
+alert("Debe escribir un mensaje");
+return;
+
+}
+
+obtenerUbicacion(function(ubicacion){
+
+const nombre =
+document.getElementById("nombre").value.trim();
+
+const motivo =
+document.getElementById("motivo").value;
+
+const dispositivo =
+obtenerDispositivo();
+
+const mensaje = encodeURIComponent(
+
+"📝 MENSAJE DEL VISITANTE\n\n" +
+
+"👤 Nombre: " + nombre + "\n" +
+
+"📌 Motivo: " + motivo + "\n" +
+
+"📱 Dispositivo: " + dispositivo + "\n\n" +
+
+"💬 Mensaje:\n" +
+
+texto +
+
+"\n\n" +
+
+ubicacion
+
+);
+
 fetch(
 `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=${mensaje}`
 )
@@ -137,11 +275,87 @@ fetch(
 .then(data => {
 
 if(data.ok){
+
 document.getElementById("sonidoEnviado").play();
 
+estadoMensaje.innerHTML =
+"✅ Mensaje enviado correctamente";
+
+document.getElementById("mensajeVisitante").value = "";
+
+}else{
+
+estadoMensaje.innerHTML =
+"❌ Error enviando mensaje";
+
+}
+
+});
+
+});
+
+}
+
+function obtenerUbicacion(callback){
+
+if(!navigator.geolocation){
+
+callback("📍 Ubicación no disponible");
+return;
+
+}
+
+navigator.geolocation.getCurrentPosition(
+
+function(pos){
+
+const lat = pos.coords.latitude;
+const lon = pos.coords.longitude;
+
+callback(
+
+"📍 Google Maps:\n" +
+
+"https://maps.google.com/?q=" +
+
+lat +
+
+"," +
+
+lon
+
+);
+
+},
+
+function(){
+
+callback(
+"📍 Ubicación no disponible"
+);
+
+}
+
+);
+
+}
+
+function enviarTelegram(mensaje,bloquear){
+
+fetch(
+`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=${mensaje}`
+)
+.then(response => response.json())
+.then(data => {
+
+if(data.ok){
+
+document.getElementById("sonidoEnviado").play();
 
 estado.innerHTML =
 "✅ Notificación enviada correctamente";
+
+if(bloquear){
 
 localStorage.setItem(
 "ultimoTimbre",
@@ -149,6 +363,8 @@ Date.now()
 );
 
 iniciarCuentaRegresiva();
+
+}
 
 }else{
 
@@ -177,7 +393,7 @@ if(!ultimo) return;
 const diferencia =
 Date.now() - parseInt(ultimo);
 
-if(diferencia < 300000){
+if(diferencia < TIEMPO_ESPERA){
 
 iniciarCuentaRegresiva();
 
@@ -198,7 +414,7 @@ const diferencia =
 Date.now() - parseInt(ultimo);
 
 const restante =
-300000 - diferencia;
+TIEMPO_ESPERA - diferencia;
 
 if(restante <= 0){
 
@@ -209,7 +425,9 @@ btn.disabled = false;
 estado.innerHTML =
 "✅ Puede volver a tocar el timbre";
 
-localStorage.removeItem("ultimoTimbre");
+localStorage.removeItem(
+"ultimoTimbre"
+);
 
 return;
 
@@ -236,3 +454,4 @@ segundos +
 
 </body>
 </html>
+
