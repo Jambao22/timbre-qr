@@ -234,12 +234,22 @@ true
 }
 
 function enviarMensaje(){
-if(MENSAJE_UNICO && localStorage.getItem("mensajeEnviado")){
+const ultimoMensaje =
+localStorage.getItem("mensajeEnviado");
+
+if(ultimoMensaje){
+
+const diferencia =
+Date.now() - parseInt(ultimoMensaje);
+
+if(diferencia < 86400000){
 
 estadoMensaje.innerHTML =
-"⛔ Ya se envió un mensaje desde este dispositivo.";
+"⛔ Ya se dejó un mensaje en las últimas 24 horas.";
 
 return;
+
+}
 
 }
 if(!validarCampos()) return;
@@ -294,7 +304,7 @@ fetch(
 if(data.ok){
 localStorage.setItem(
 "mensajeEnviado",
-"si"
+Date.now()
 );
 
 btnMensaje.disabled = true;
