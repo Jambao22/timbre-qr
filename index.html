@@ -126,6 +126,16 @@ const estado = document.getElementById("estado");
 
 const btnMensaje = document.getElementById("btnMensaje");
 const estadoMensaje = document.getElementById("estadoMensaje");
+const MENSAJE_UNICO = true;
+
+if(localStorage.getItem("mensajeEnviado")){
+
+btnMensaje.disabled = true;
+
+estadoMensaje.innerHTML =
+"⛔ Ya se envió un mensaje desde este dispositivo.";
+
+}
 
 verificarBloqueo();
 
@@ -224,7 +234,14 @@ true
 }
 
 function enviarMensaje(){
+if(MENSAJE_UNICO && localStorage.getItem("mensajeEnviado")){
 
+estadoMensaje.innerHTML =
+"⛔ Ya se envió un mensaje desde este dispositivo.";
+
+return;
+
+}
 if(!validarCampos()) return;
 
 const texto =
@@ -275,7 +292,12 @@ fetch(
 .then(data => {
 
 if(data.ok){
+localStorage.setItem(
+"mensajeEnviado",
+"si"
+);
 
+btnMensaje.disabled = true;
 document.getElementById("sonidoEnviado").play();
 
 estadoMensaje.innerHTML =
