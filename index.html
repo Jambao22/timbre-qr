@@ -128,12 +128,37 @@ const btnMensaje = document.getElementById("btnMensaje");
 const estadoMensaje = document.getElementById("estadoMensaje");
 const MENSAJE_UNICO = true;
 
-if(localStorage.getItem("mensajeEnviado")){
+const BLOQUEO_MENSAJE = 86400000; // 24 horas
+
+const ultimoMensaje =
+localStorage.getItem("mensajeEnviado");
+
+if(ultimoMensaje){
+
+const diferencia =
+Date.now() - parseInt(ultimoMensaje);
+
+if(diferencia < BLOQUEO_MENSAJE){
 
 btnMensaje.disabled = true;
 
+const horas =
+Math.ceil(
+(BLOQUEO_MENSAJE - diferencia)
+/
+3600000
+);
+
 estadoMensaje.innerHTML =
-"⛔ Ya se envió un mensaje desde este dispositivo.";
+"⛔ Ya se dejó un mensaje. Intente nuevamente en aproximadamente " +
+horas +
+" horas.";
+
+}else{
+
+localStorage.removeItem("mensajeEnviado");
+
+}
 
 }
 
