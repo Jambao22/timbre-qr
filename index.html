@@ -353,48 +353,6 @@ estadoMensaje.innerHTML =
 
 }
 
-function obtenerUbicacion(callback){
-
-if(!navigator.geolocation){
-
-callback("📍 Ubicación no disponible");
-return;
-
-}
-
-navigator.geolocation.getCurrentPosition(
-
-function(pos){
-
-const lat = pos.coords.latitude;
-const lon = pos.coords.longitude;
-
-callback(
-
-"📍 Google Maps:\n" +
-
-"https://maps.google.com/?q=" +
-
-lat +
-
-"," +
-
-lon
-
-);
-
-},
-
-function(){
-
-callback(
-"📍 Ubicación no disponible"
-);
-
-}
-
-);
-
 }
 
 function enviarTelegram(mensaje,bloquear){
