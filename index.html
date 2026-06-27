@@ -126,43 +126,8 @@ const estado = document.getElementById("estado");
 
 const btnMensaje = document.getElementById("btnMensaje");
 const estadoMensaje = document.getElementById("estadoMensaje");
-const MENSAJE_UNICO = true;
 
 const BLOQUEO_MENSAJE = 86400000; // 24 horas
-
-const ultimoMensaje =
-localStorage.getItem("mensajeEnviado");
-
-if(ultimoMensaje){
-
-const diferencia =
-Date.now() - parseInt(ultimoMensaje);
-
-if(diferencia < BLOQUEO_MENSAJE){
-
-btnMensaje.disabled = true;
-
-const horas =
-Math.ceil(
-(BLOQUEO_MENSAJE - diferencia)
-/
-3600000
-);
-
-estadoMensaje.innerHTML =
-"⛔ Ya se dejó un mensaje. Intente nuevamente en aproximadamente " +
-horas +
-" horas.";
-
-}else{
-
-localStorage.removeItem("mensajeEnviado");
-
-}
-
-}
-
-verificarBloqueo();
 
 btn.addEventListener("click", tocarTimbre);
 btnMensaje.addEventListener("click", enviarMensaje);
@@ -177,34 +142,27 @@ if(/Windows/i.test(ua)) return "Windows";
 if(/Mac/i.test(ua)) return "Mac";
 
 return "Desconocido";
-
 }
 
 function validarCampos(){
 
-const nombre =
-document.getElementById("nombre").value.trim();
-
-const motivo =
-document.getElementById("motivo").value;
+const nombre = document.getElementById("nombre").value.trim();
+const motivo = document.getElementById("motivo").value;
 
 if(nombre === ""){
-
 alert("Debe ingresar su nombre");
 return false;
-
 }
 
 if(motivo === ""){
-
 alert("Debe seleccionar un motivo");
 return false;
-
 }
 
 return true;
-
 }
+
+/* ---------------- TIMBRE ---------------- */
 
 function tocarTimbre(){
 
@@ -212,209 +170,113 @@ if(!validarCampos()) return;
 
 document.getElementById("sonidoTimbre").play();
 
-obtenerUbicacion(function(ubicacion){
-
-const nombre =
-document.getElementById("nombre").value.trim();
-
-const motivo =
-document.getElementById("motivo").value;
+const nombre = document.getElementById("nombre").value.trim();
+const motivo = document.getElementById("motivo").value;
 
 const ahora = new Date();
 
-const fecha =
-ahora.toLocaleDateString("es-AR");
-
-const hora =
-ahora.toLocaleTimeString("es-AR");
-
-const dispositivo =
-obtenerDispositivo();
-
 const mensaje = encodeURIComponent(
-
 "🏠 TIMBRE QR\n\n" +
-
 "👤 Nombre: " + nombre + "\n" +
-
 "📌 Motivo: " + motivo + "\n" +
-
-"📱 Dispositivo: " + dispositivo + "\n" +
-
-"📅 Fecha: " + fecha + "\n" +
-
-"🕒 Hora: " + hora + "\n\n" +
-
-ubicacion
-
+"📱 Dispositivo: " + obtenerDispositivo() + "\n" +
+"📅 Fecha: " + ahora.toLocaleDateString("es-AR") + "\n" +
+"🕒 Hora: " + ahora.toLocaleTimeString("es-AR")
 );
 
-enviarTelegram(
-mensaje,
-true
-);
-
-});
-
+enviarTelegram(mensaje, true);
 }
+
+/* ---------------- MENSAJE ---------------- */
 
 function enviarMensaje(){
-const ultimoMensaje =
-localStorage.getItem("mensajeEnviado");
+
+const ultimoMensaje = localStorage.getItem("mensajeEnviado");
 
 if(ultimoMensaje){
+const diferencia = Date.now() - parseInt(ultimoMensaje);
 
-const diferencia =
-Date.now() - parseInt(ultimoMensaje);
-
-if(diferencia < 86400000){
-
-estadoMensaje.innerHTML =
-"⛔ Ya se dejó un mensaje en las últimas 24 horas.";
-
+if(diferencia < BLOQUEO_MENSAJE){
+estadoMensaje.innerHTML = "⛔ Ya se dejó un mensaje en las últimas 24 horas.";
 return;
-
+}
 }
 
-}
 if(!validarCampos()) return;
 
-const texto =
-document.getElementById("mensajeVisitante").value.trim();
+const texto = document.getElementById("mensajeVisitante").value.trim();
 
 if(texto === ""){
-
 alert("Debe escribir un mensaje");
 return;
-
 }
 
-obtenerUbicacion(function(ubicacion){
-
-const nombre =
-document.getElementById("nombre").value.trim();
-
-const motivo =
-document.getElementById("motivo").value;
-
-const dispositivo =
-obtenerDispositivo();
+const nombre = document.getElementById("nombre").value.trim();
+const motivo = document.getElementById("motivo").value;
 
 const mensaje = encodeURIComponent(
-
 "📝 MENSAJE DEL VISITANTE\n\n" +
-
 "👤 Nombre: " + nombre + "\n" +
-
 "📌 Motivo: " + motivo + "\n" +
-
-"📱 Dispositivo: " + dispositivo + "\n\n" +
-
-"💬 Mensaje:\n" +
-
-texto +
-
-"\n\n" +
-
-ubicacion
-
+"📱 Dispositivo: " + obtenerDispositivo() + "\n\n" +
+"💬 Mensaje:\n" + texto
 );
 
-fetch(
-`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=${mensaje}`
-)
-.then(response => response.json())
+fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=${mensaje}`)
+.then(r => r.json())
 .then(data => {
 
 if(data.ok){
-localStorage.setItem(
-"mensajeEnviado",
-Date.now()
-);
+
+localStorage.setItem("mensajeEnviado", Date.now());
 
 btnMensaje.disabled = true;
 document.getElementById("sonidoEnviado").play();
 
-estadoMensaje.innerHTML =
-"✅ Mensaje enviado correctamente";
+estadoMensaje.innerHTML = "✅ Mensaje enviado correctamente";
 
 document.getElementById("mensajeVisitante").value = "";
 
 }else{
 
-estadoMensaje.innerHTML =
-"❌ Error enviando mensaje";
+estadoMensaje.innerHTML = "❌ Error enviando mensaje";
 
 }
 
 });
 
-});
-
 }
 
-}
+/* ---------------- TELEGRAM ---------------- */
 
-function enviarTelegram(mensaje,bloquear){
+function enviarTelegram(mensaje, bloquear){
 
-fetch(
-`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=${mensaje}`
-)
-.then(response => response.json())
+fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatid}&text=${mensaje}`)
+.then(r => r.json())
 .then(data => {
 
 if(data.ok){
 
 document.getElementById("sonidoEnviado").play();
-
-estado.innerHTML =
-"✅ Notificación enviada correctamente";
+estado.innerHTML = "✅ Notificación enviada correctamente";
 
 if(bloquear){
-
-localStorage.setItem(
-"ultimoTimbre",
-Date.now()
-);
-
+localStorage.setItem("ultimoTimbre", Date.now());
 iniciarCuentaRegresiva();
-
 }
 
 }else{
-
-estado.innerHTML =
-"❌ Error enviando el mensaje";
-
+estado.innerHTML = "❌ Error en el envío";
 }
 
 })
 .catch(() => {
-
-estado.innerHTML =
-"❌ Error de conexión";
-
+estado.innerHTML = "❌ Error de conexión";
 });
 
 }
 
-function verificarBloqueo(){
-
-const ultimo =
-localStorage.getItem("ultimoTimbre");
-
-if(!ultimo) return;
-
-const diferencia =
-Date.now() - parseInt(ultimo);
-
-if(diferencia < TIEMPO_ESPERA){
-
-iniciarCuentaRegresiva();
-
-}
-
-}
+/* ---------------- BLOQUEO ---------------- */
 
 function iniciarCuentaRegresiva(){
 
@@ -422,48 +284,41 @@ btn.disabled = true;
 
 const intervalo = setInterval(() => {
 
-const ultimo =
-localStorage.getItem("ultimoTimbre");
-
-const diferencia =
-Date.now() - parseInt(ultimo);
-
-const restante =
-TIEMPO_ESPERA - diferencia;
+const ultimo = localStorage.getItem("ultimoTimbre");
+const diferencia = Date.now() - parseInt(ultimo);
+const restante = TIEMPO_ESPERA - diferencia;
 
 if(restante <= 0){
-
 clearInterval(intervalo);
-
 btn.disabled = false;
-
-estado.innerHTML =
-"✅ Puede volver a tocar el timbre";
-
-localStorage.removeItem(
-"ultimoTimbre"
-);
-
+estado.innerHTML = "✅ Puede volver a tocar el timbre";
+localStorage.removeItem("ultimoTimbre");
 return;
-
 }
 
-const minutos =
-Math.floor(restante/60000);
+const minutos = Math.floor(restante/60000);
+const segundos = Math.floor((restante%60000)/1000);
 
-const segundos =
-Math.floor((restante%60000)/1000);
-
-estado.innerHTML =
-"⏳ Espere " +
-minutos +
-"m " +
-segundos +
-"s para volver a tocar";
+estado.innerHTML = `⏳ Espere ${minutos}m ${segundos}s`;
 
 },1000);
 
 }
+
+function verificarBloqueo(){
+
+const ultimo = localStorage.getItem("ultimoTimbre");
+if(!ultimo) return;
+
+const diferencia = Date.now() - parseInt(ultimo);
+
+if(diferencia < TIEMPO_ESPERA){
+iniciarCuentaRegresiva();
+}
+
+}
+
+verificarBloqueo();
 
 </script>
 
